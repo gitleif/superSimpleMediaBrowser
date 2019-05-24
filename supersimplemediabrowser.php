@@ -17,32 +17,54 @@
         public $PublicSub = "";
         public $FallbackURL = "";
         private $_BaseArray = null;
+        public $RequestURI = null;
         
-        function __construct($UrlRoot, $SubFolderInRoot, $FallbackURL = null)
+        
+        function __construct($UrlRoot, $SubFolderInRoot, $FallbackUrl = null, $RequestURI = null)
         {
             $this->PublicRoot = $UrlRoot;
             $this->PublicSub  = $SubFolderInRoot;
-            $this->MediaDataFileFolder = $_SERVER['DOCUMENT_ROOT'] . $_SERVER["REDIRECT_URL"];
-            $nearest = $this->fixFilepath($this->findMediaDataFile(  $this->MediaDataFileFolder ));
-            $tmp = $_SERVER['DOCUMENT_ROOT'] . $this->PublicSub;
-            $tmpnew = str_replace($nearest, "", $this->fixFilepath($this->MediaDataFileFolder));
-            $this->SubFolder = trim($tmpnew,"/");
-
-            $BaseRoot = $_SERVER['DOCUMENT_ROOT'] . $this->PublicSub;
-            $BaseUrl = $this->PublicRoot . $this->PublicSub;
-            $Mappe = $this->fixFilepath($_SERVER['DOCUMENT_ROOT'] . $_SERVER['REQUEST_URI']);
-            $BaseFolder = str_replace($BaseRoot,"", $Mappe);
-            $Mappe = $BaseRoot . $BaseFolder;
+            $this->FallbackURL = $FallbackUrl;
+            $this->RequestURI = $RequestURI;
+            if($RequestURI==null)
+            {
+              $this->RequestURI = $this->fixFilepath($_SERVER['DOCUMENT_ROOT'] . $_SERVER['REQUEST_URI']);          
+            }
+            $this->setMediaDataFolder($this->fixFilepath($_SERVER['DOCUMENT_ROOT'] . $_SERVER["REDIRECT_URL"]));
             
-            $this->_BaseArray = explode('/', $BaseFolder);
-            $this->_BaseArray = array_filter($this->_BaseArray);
+            // Check if fallback is set
+            if($this->parseMediaDataFile()==null && $FallbackUrl !=null)
+            {
+              $this->RequestURI = $FallbackUrl;
+              $this->setMediaDataFolder($_SERVER['DOCUMENT_ROOT']  . $SubFolderInRoot .  $FallbackUrl);
+            }
+        }
+        
+        public function setMediaDataFolder($Folder)
+        {
+              $this->MediaDataFileFolder = $this->fixFilepath($Folder);
+              $nearest = $this->fixFilepath($this->findMediaDataFile(  $this->MediaDataFileFolder ));
+              $tmpnew = str_replace($nearest, "", $this->fixFilepath($this->MediaDataFileFolder));
+              $this->SubFolder = trim($tmpnew,"/");
+              $BaseRoot = $_SERVER['DOCUMENT_ROOT'] . $this->PublicSub;
+              $BaseUrl = $this->PublicRoot . $this->PublicSub;
+            
+              $Mappe = $this->fixFilepath($this->RequestURI);            
+              $BaseFolder = str_replace($BaseRoot,"", $Mappe);
+              $Mappe = $BaseRoot . $BaseFolder;
+              
+              $this->_BaseArray = explode('/', $BaseFolder);
+              $this->_BaseArray = array_filter($this->_BaseArray);
          
             if($this->_BaseArray!=null && empty($this->_BaseArray)==false && isset($this->_BaseArray[0]))
             {
               $this->BaseImageURL = $BaseUrl . $this->_BaseArray[0] . "/";
               }
-              
-              $this->FallbackURL = $FallbackURL;
+              else
+              {
+                     $this->BaseImageURL = $BaseUrl . $this->FallbackURL . "/";
+                     $this->_BaseArray[0] = $this->FallbackURL;
+              }
         }
     
         
@@ -70,11 +92,14 @@
         public function readDataFile($Folder)
         {
                 // check if data.php exist in $Folder
-                $file = $Folder . DIRECTORY_SEPARATOR . "data.php";
+                $file = $this->fixFilepath($Folder . DIRECTORY_SEPARATOR . "data.php");
                 if(file_exists($file))
                 {
-                           require_once($file);
-                           return($Data);
+                           require($file);
+                           if(isset($Data))
+                           {
+                            return($Data);
+                            }
                 }
                 // Did not find data.php
                 return null;
@@ -108,8 +133,9 @@
             // Check if folder exist
             if(is_dir($Folder)==true)
             {
-                $array = null;
-                $xPath = str_replace('/',DIRECTORY_SEPARATOR, $Folder);
+                     $Folder =  $this->fixFilepath($Folder);
+                     $array = null;
+                     $xPath = $this->fixFilepath(str_replace('/',DIRECTORY_SEPARATOR, $Folder));
                 
                 foreach($this->getDirContents($Folder) as $item)
                 {
@@ -118,7 +144,7 @@
                         if(in_array($parts['extension'], $this->AllowedFiles))
                         {
                                     $tmp =str_replace($xPath, "" , $item);
-                                    $array[] = str_replace($Folder, "" , $tmp);
+                                    $array[] = str_replace($this->fixFilepath($Folder), "" , $this->fixFilepath($tmp));
                         }
                 }
                 
