@@ -30,13 +30,13 @@
             {
               $this->RequestURI = $this->fixFilepath($_SERVER['DOCUMENT_ROOT'] . $_SERVER['REQUEST_URI']);          
             }
-            $this->setMediaDataFolder($this->fixFilepath($_SERVER['DOCUMENT_ROOT'] . $_SERVER["REDIRECT_URL"]));
+            @$this->setMediaDataFolder($this->fixFilepath($_SERVER['DOCUMENT_ROOT'] . $_SERVER["REDIRECT_URL"]));
             
             // Check if fallback is set
             if($this->parseMediaDataFile()==null && $FallbackUrl !=null)
             {
               $this->RequestURI = $FallbackUrl;
-              $this->setMediaDataFolder($_SERVER['DOCUMENT_ROOT']  . $SubFolderInRoot .  $FallbackUrl);
+              $this->setMediaDataFolder($this->fixFilepath($_SERVER['DOCUMENT_ROOT']  . "/" . $SubFolderInRoot .  $FallbackUrl));
             }
         }
         
@@ -52,9 +52,9 @@
               $Mappe = $this->fixFilepath($this->RequestURI);            
               $BaseFolder = str_replace($BaseRoot,"", $Mappe);
               $Mappe = $BaseRoot . $BaseFolder;
-              
               $this->_BaseArray = explode('/', $BaseFolder);
-              $this->_BaseArray = array_filter($this->_BaseArray);
+              
+              $this->_BaseArray = array_values(array_filter($this->_BaseArray));
          
             if($this->_BaseArray!=null && empty($this->_BaseArray)==false && isset($this->_BaseArray[0]))
             {
